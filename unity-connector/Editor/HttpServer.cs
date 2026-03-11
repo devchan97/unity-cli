@@ -32,6 +32,13 @@ namespace UnityCliConnector
             EditorApplication.quitting += Stop;
             AssemblyReloadEvents.beforeAssemblyReload += Stop;
             AssemblyReloadEvents.afterAssemblyReload += Start;
+            EditorApplication.projectChanged += Restart;
+        }
+
+        static void Restart()
+        {
+            Stop();
+            Start();
         }
 
         public static int Port => s_Port;
@@ -137,6 +144,8 @@ namespace UnityCliConnector
 
                     var command = json["command"]?.ToString();
                     var parameters = json["params"] as JObject;
+
+                    Debug.Log($"[UnityCliConnector] ← {command} (tools: {ToolDiscovery.Tools.Count})");
 
                     if (string.IsNullOrEmpty(command))
                     {

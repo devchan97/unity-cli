@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -68,7 +69,13 @@ namespace UnityCliConnector
 
             if (ToolDiscovery.Tools.TryGetValue(command, out var tool) == false)
             {
-                return new ErrorResponse($"Unknown command: {command}");
+                return new
+                {
+                    success = false,
+                    error = $"Unknown command: {command}",
+                    registered_tools = ToolDiscovery.Tools.Keys.ToArray(),
+                    tool_count = ToolDiscovery.Tools.Count,
+                };
             }
 
             if (IsReadOnly(command))

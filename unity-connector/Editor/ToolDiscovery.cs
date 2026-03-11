@@ -51,7 +51,8 @@ namespace UnityCliConnector
                 }
             }
 
-            Debug.Log($"[UnityCliConnector] Discovered {s_Tools.Count} tools");
+            var names = string.Join(", ", s_Tools.Keys);
+            Debug.Log($"[UnityCliConnector] Discovered {s_Tools.Count} tools: {names}");
         }
 
         static void TryRegister(Type type)

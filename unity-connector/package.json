@@ -5,7 +5,8 @@
   "description": "HTTP bridge for unity-cli. Receives CLI commands and dispatches to registered tool handlers.",
   "unity": "6000.0",
   "author": {
-    "name": "youngwoocho02"
+    "name": "DevBookOfArray",
+    "url": "https://www.youtube.com/@DevBookOfArray"
   },
   "keywords": ["cli", "tools", "editor"],
   "type": "library"

@@ -1,6 +1,9 @@
 # unity-cli
 
-Command-line tool to control Unity Editor directly from the terminal. Built for AI coding assistants (Claude Code, Cursor, etc.) but works with anything that can run shell commands.
+> Control Unity Editor from the command line. Built for AI agents, works with anything.
+
+[![YouTube](https://img.shields.io/badge/YouTube-DevBookOfArray-red?logo=youtube)](https://www.youtube.com/@DevBookOfArray)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **No MCP protocol. No Python relay. No runtime dependencies. Just a single binary.**
 
@@ -324,6 +327,10 @@ unity-cli editor play
 | **Reconnection** | Complex reconnect logic for domain reloads | Stateless per request |
 | **Compatibility** | MCP-compatible clients only | Anything with a shell |
 | **Custom tools** | Same `[Attribute]` + `HandleCommand` pattern | Same |
+
+## Author
+
+**DevBookOfArray** — [YouTube](https://www.youtube.com/@DevBookOfArray) · [GitHub](https://github.com/youngwoocho02)
 
 ## License
 

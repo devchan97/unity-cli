@@ -38,7 +38,8 @@ jobs:
         run: |
           EXT=""
           if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
-          go build -ldflags="-s -w" -o "unity-cli-${GOOS}-${GOARCH}${EXT}" .
+          VERSION="${GITHUB_REF_NAME}"
+          go build -ldflags="-s -w -X main.Version=${VERSION}" -o "unity-cli-${GOOS}-${GOARCH}${EXT}" .
 
       - uses: actions/upload-artifact@v4
         with:

@@ -9,6 +9,8 @@ import (
 	"github.com/youngwoocho02/unity-cli/internal/client"
 )
 
+var Version = "dev"
+
 var (
 	flagPort    int
 	flagProject string
@@ -46,7 +48,7 @@ func Execute() error {
 		}
 		return nil
 	case "version", "--version", "-v":
-		fmt.Println("unity-cli v0.1.0")
+		fmt.Println("unity-cli " + Version)
 		return nil
 	}
 
@@ -165,7 +167,7 @@ func extractFlags(args []string) []string {
 }
 
 func printHelp() {
-	fmt.Print(`unity-cli v0.1.0 — Control Unity Editor from the command line
+	fmt.Print(`unity-cli ` + Version + ` — Control Unity Editor from the command line
 
 Usage: unity-cli <command> [subcommand] [options]
 

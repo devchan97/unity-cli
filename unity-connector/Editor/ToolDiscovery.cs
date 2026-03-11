@@ -8,7 +8,7 @@ using UnityEngine;
 namespace UnityCliConnector
 {
     /// <summary>
-    /// Discovers all classes with [UnityCliTool] or [McpForUnityTool] attributes
+    /// Discovers all classes with [UnityCliTool] attribute
     /// and registers their HandleCommand methods with the CommandRouter.
     /// </summary>
     [InitializeOnLoad]

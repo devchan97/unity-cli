@@ -250,6 +250,8 @@ Reserialize:
 Profiler:
   profiler hierarchy              Top-level profiler samples (last frame)
   profiler hierarchy --depth 5    Recursive drill-down (0=unlimited)
+  profiler hierarchy --root Name  Set root by name (substring match)
+  profiler hierarchy --frames 30  Average over last 30 frames
   profiler hierarchy --parent 5   Drill into item by ID
   profiler hierarchy --min 0.5    Filter items below 0.5ms
   profiler hierarchy --sort self  Sort by self time
@@ -373,6 +375,8 @@ Examples:
 Subcommands:
   hierarchy             Top-level profiler samples (last frame)
     --depth <N>         Recursive depth (0=unlimited, default: 1)
+    --root <name>       Set root by name (substring match, searches full tree)
+    --frames <N>        Average over last N frames (flat output, sorted by time)
     --parent <ID>       Drill into item by ID
     --min <ms>          Filter items below threshold
     --sort <col>        Sort by: total (default), self, calls
@@ -386,7 +390,8 @@ Subcommands:
 
 Examples:
   unity-cli profiler hierarchy --depth 3
-  unity-cli profiler hierarchy --min 0.5 --sort self
+  unity-cli profiler hierarchy --root SimulationSystem --depth 3
+  unity-cli profiler hierarchy --frames 30 --min 0.5 --sort self
   unity-cli profiler enable
 `)
 	case "list":

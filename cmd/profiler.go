@@ -20,7 +20,11 @@ func profilerCmd(args []string, send sendFn) (*client.CommandResponse, error) {
 	case "hierarchy":
 		setInt(flags, params, "parent", "parent_id")
 		setInt(flags, params, "frame", "frame")
+		setInt(flags, params, "frames", "frames")
+		setInt(flags, params, "from", "from")
+		setInt(flags, params, "to", "to")
 		setInt(flags, params, "thread", "thread_index")
+		setStr(flags, params, "root", "root")
 		setFloat(flags, params, "min", "min_time")
 		setStr(flags, params, "sort", "sort_by")
 		setInt(flags, params, "max", "max_items")

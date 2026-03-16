@@ -276,12 +276,16 @@ unity-cli profiler status
 unity-cli profiler clear
 ```
 
+### 도구 목록
+
+```bash
+# 사용 가능한 모든 도구 (내장 + 프로젝트 커스텀)와 파라미터 스키마 표시
+unity-cli list
+```
+
 ### 커스텀 도구
 
 ```bash
-# 등록된 모든 도구 목록 (내장 + 프로젝트 커스텀)
-unity-cli list
-
 # 커스텀 도구를 이름으로 직접 호출
 unity-cli my_custom_tool
 

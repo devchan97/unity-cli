@@ -276,12 +276,16 @@ unity-cli profiler status
 unity-cli profiler clear
 ```
 
+### List Tools
+
+```bash
+# Show all available tools (built-in + project custom) with parameter schemas
+unity-cli list
+```
+
 ### Custom Tools
 
 ```bash
-# List all registered tools (built-in + project custom)
-unity-cli list
-
 # Call a custom tool directly by name
 unity-cli my_custom_tool
 

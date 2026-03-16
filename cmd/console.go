@@ -11,6 +11,11 @@ func consoleCmd(args []string, send sendFn) (*client.CommandResponse, error) {
 
 	flags := parseSubFlags(args)
 
+	if _, ok := flags["clear"]; ok {
+		params["action"] = "clear"
+		return send("read_console", params)
+	}
+
 	if v, ok := flags["lines"]; ok {
 		if n, err := strconv.Atoi(v); err == nil {
 			params["count"] = n

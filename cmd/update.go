@@ -80,11 +80,13 @@ func updateCmd(args []string) error {
 	}
 
 	if err := os.Rename(tmpFile, exe); err != nil {
-		os.Rename(backup, exe)
+		if restoreErr := os.Rename(backup, exe); restoreErr != nil {
+			return fmt.Errorf("replace failed: %w (restore also failed: %v)", err, restoreErr)
+		}
 		return fmt.Errorf("replace failed: %w", err)
 	}
 
-	os.Remove(backup)
+	_ = os.Remove(backup)
 
 	fmt.Printf("Updated to %s\n", latest)
 	return nil
@@ -97,7 +99,7 @@ func fetchLatestRelease() (*ghRelease, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
 	}
 
@@ -125,7 +127,7 @@ func download(url string, targetDir string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("download returned %d", resp.StatusCode)
 	}
 

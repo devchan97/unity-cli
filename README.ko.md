@@ -67,7 +67,7 @@ https://github.com/youngwoocho02/unity-cli.git?path=unity-connector
 "com.youngwoocho02.unity-cli-connector": "https://github.com/youngwoocho02/unity-cli.git?path=unity-connector"
 ```
 
-특정 버전을 고정하려면 URL 끝에 `#v0.2.5`를 추가하세요.
+특정 버전을 고정하려면 URL 끝에 태그를 추가하세요 (예: `#v0.2.16`).
 
 추가 후 Unity를 열면 커넥터가 자동으로 시작됩니다. 별도 설정 불필요.
 
@@ -78,6 +78,22 @@ https://github.com/youngwoocho02/unity-cli.git?path=unity-connector
 **Edit → Preferences → General → Interaction Mode**에서 **No Throttling**으로 설정하세요.
 
 이렇게 하면 Unity가 백그라운드에 있어도 CLI 명령이 즉시 처리됩니다.
+
+## 빠른 시작
+
+```bash
+# Unity 연결 확인
+unity-cli status
+
+# 플레이 모드 진입 후 대기
+unity-cli editor play --wait
+
+# Unity 안에서 C# 코드 실행
+unity-cli exec "Application.dataPath"
+
+# 콘솔 로그 읽기
+unity-cli console --filter all
+```
 
 ## 동작 방식
 
@@ -156,8 +172,7 @@ unity-cli console --lines 20 --filter all
 unity-cli console --filter error
 
 # 콘솔 지우기
-# (exec 사용)
-unity-cli exec "typeof(UnityEditor.LogEntries).GetMethod(\"Clear\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public).Invoke(null, null); return \"cleared\";"
+unity-cli console --clear
 ```
 
 ### C# 코드 실행
@@ -185,9 +200,6 @@ unity-cli exec "var sb = new System.Text.StringBuilder(); foreach(var w in World
 
 # 런타임에서 프로젝트 설정 수정
 unity-cli exec "PlayerSettings.bundleVersion = \"1.2.3\"; return PlayerSettings.bundleVersion;"
-
-# ScriptableObject 접근
-unity-cli exec "Resources.Load<GameSettings>(\"GameSettings\").maxPlayers" --usings YourNamespace
 ```
 
 `exec`는 실제 C#을 컴파일하고 실행하므로, 커스텀 도구가 할 수 있는 모든 것을 할 수 있습니다 — ECS 엔티티 조사, 에셋 수정, 내부 API 호출, 에디터 유틸리티 실행. AI 에이전트에게 이것은 **도구 코드를 한 줄도 작성하지 않고 Unity 전체 런타임에 즉시 접근**할 수 있다는 의미입니다.
@@ -256,6 +268,14 @@ unity-cli tool call my_custom_tool --params '{"key": "value"}'
 
 # 도구 도움말
 unity-cli tool help my_custom_tool
+```
+
+인식되지 않는 명령어 이름은 커스텀 도구 호출로 직접 전달됩니다:
+
+```bash
+# 다음 두 명령은 동일합니다
+unity-cli my_custom_tool
+unity-cli tool call my_custom_tool
 ```
 
 ### 상태 확인

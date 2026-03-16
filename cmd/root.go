@@ -214,6 +214,7 @@ Console:
   console                       Read error & warning logs (default)
   console --lines 20            Limit to N entries
   console --filter all          Filter: error, warn, log, all
+  console --clear               Clear console
 
 Execute C#:
   exec "<code>"                 Run C# code in Unity (single expression auto-returns)
@@ -306,11 +307,13 @@ Read Unity console log entries.
 Options:
   --lines <N>          Limit to N entries
   --filter <mode>      Filter: error, warn, log, all (default: error+warn)
+  --clear              Clear console
 
 Examples:
   unity-cli console
   unity-cli console --lines 20 --filter all
   unity-cli console --filter error
+  unity-cli console --clear
 `)
 	case "exec":
 		fmt.Print(`Usage: unity-cli exec "<code>" [options]

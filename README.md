@@ -67,7 +67,7 @@ Or add directly to `Packages/manifest.json`:
 "com.youngwoocho02.unity-cli-connector": "https://github.com/youngwoocho02/unity-cli.git?path=unity-connector"
 ```
 
-To pin a specific version, append `#v0.2.5` to the URL.
+To pin a specific version, append a tag to the URL (e.g. `#v0.2.16`).
 
 Once added, the Connector starts automatically when Unity opens. No configuration needed.
 
@@ -78,6 +78,22 @@ By default, Unity throttles editor updates when the window is unfocused. This me
 To fix this, go to **Edit → Preferences → General → Interaction Mode** and set it to **No Throttling**.
 
 This ensures CLI commands are processed immediately, even when Unity is in the background.
+
+## Quick Start
+
+```bash
+# Check Unity connection
+unity-cli status
+
+# Enter play mode and wait
+unity-cli editor play --wait
+
+# Run C# code inside Unity
+unity-cli exec "Application.dataPath"
+
+# Read console logs
+unity-cli console --filter all
+```
 
 ## How It Works
 
@@ -156,8 +172,7 @@ unity-cli console --lines 20 --filter all
 unity-cli console --filter error
 
 # Clear console
-# (use exec for this)
-unity-cli exec "typeof(UnityEditor.LogEntries).GetMethod(\"Clear\", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public).Invoke(null, null); return \"cleared\";"
+unity-cli console --clear
 ```
 
 ### Execute C# Code
@@ -185,9 +200,6 @@ unity-cli exec "var sb = new System.Text.StringBuilder(); foreach(var w in World
 
 # Modify project settings at runtime
 unity-cli exec "PlayerSettings.bundleVersion = \"1.2.3\"; return PlayerSettings.bundleVersion;"
-
-# Access ScriptableObjects
-unity-cli exec "Resources.Load<GameSettings>(\"GameSettings\").maxPlayers" --usings YourNamespace
 ```
 
 Because `exec` compiles and runs real C#, it can do anything a custom tool can — inspect ECS entities, modify assets, call internal APIs, run editor utilities. For AI agents, this means **zero-friction access to Unity's entire runtime** without writing a single line of tool code.
@@ -256,6 +268,14 @@ unity-cli tool call my_custom_tool --params '{"key": "value"}'
 
 # Get tool help
 unity-cli tool help my_custom_tool
+```
+
+Any unrecognized command name is sent directly as a custom tool call:
+
+```bash
+# These two are equivalent
+unity-cli my_custom_tool
+unity-cli tool call my_custom_tool
 ```
 
 ### Status

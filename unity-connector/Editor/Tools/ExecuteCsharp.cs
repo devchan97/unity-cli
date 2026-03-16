@@ -102,7 +102,9 @@ namespace UnityCliConnector.Tools
                 return new ErrorResponse($"Compile error:\n{string.Join("\n", errors)}");
             }
 
-            var method = result.CompiledAssembly.GetType("__CliDynamic").GetMethod("Execute");
+            var method = result.CompiledAssembly.GetType("__CliDynamic")?.GetMethod("Execute");
+            if (method == null)
+                return new ErrorResponse("Internal error: compiled type or method not found.");
             var output = method.Invoke(null, null);
             return new SuccessResponse("OK", Serialize(output, 0));
         }

@@ -18,9 +18,6 @@ namespace UnityCliConnector
                 return str;
 
             var parts = str.Split('_');
-            if (parts.Length == 0)
-                return str;
-
             var first = parts[0];
             var rest = string.Concat(parts.Skip(1).Select(part =>
                 string.IsNullOrEmpty(part) ? "" : char.ToUpperInvariant(part[0]) + part.Substring(1)));

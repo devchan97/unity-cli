@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> **Fork notice:** This is a fork of [devchan97/unity-cli](https://github.com/devchan97/unity-cli) with additional features — tool discovery caching, exec/package timeouts, test result capture via ICallbacks proxy, batch command endpoint, and 6 new built-in tools (scene, assets, build, packages, tests, gameobject management).
+> **Fork notice:** This is a fork of [devchan97/unity-cli](https://github.com/devchan97/unity-cli) with additional features — tool discovery caching, exec compilation caching, exec/package timeouts, test result capture via ICallbacks proxy, batch command endpoint, `--debug` flag, and 6 new built-in tools (scene, assets, build, packages, tests, gameobject management).
 
 **No server to run. No config to write. No process to manage. Just type a command.**
 
@@ -18,6 +18,7 @@ This fork was created using **Claude Code Agent Teams** to systematically improv
 
 - **Phase 1**: Added 6 new tool modules (scene, assets, build, packages, tests, gameobject) — expanding from 7 to 13 built-in commands
 - **Phase 2**: Performance optimizations — tool discovery caching, execution timeouts, test result capture via dynamic ICallbacks proxy, and batch command support
+- **Phase 3**: Deep optimizations — exec compilation caching (SHA256 + LRU, ~5x faster repeated calls), batch parallel enqueue, `--debug` flag for HTTP request/response logging, Windows MAX_PATH fix via response files
 
 The entire process — code generation, cross-review, and integration — was orchestrated by parallel AI agent teams, demonstrating how AI-driven development can enhance open-source tools at scale.
 
@@ -317,6 +318,7 @@ The CLI also checks Unity's state automatically before sending any command. If U
 | `--port <N>` | Override Unity instance port (skip auto-discovery) | auto |
 | `--project <path>` | Select Unity instance by project path | latest |
 | `--timeout <ms>` | HTTP request timeout | 120000 |
+| `--debug` | Log HTTP requests and responses to stderr | off |
 
 ```bash
 # Connect to a specific Unity instance

@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> **포크 안내:** [devchan97/unity-cli](https://github.com/devchan97/unity-cli)의 포크입니다. 추가된 기능 — 도구 탐색 캐싱, exec/패키지 타임아웃, ICallbacks 프록시 테스트 결과 캡처, 배치 명령 엔드포인트, 내장 도구 6개 추가 (씬, 에셋, 빌드, 패키지, 테스트, 게임오브젝트 관리).
+> **포크 안내:** [devchan97/unity-cli](https://github.com/devchan97/unity-cli)의 포크입니다. 추가된 기능 — 도구 탐색 캐싱, exec 컴파일 캐싱, exec/패키지 타임아웃, ICallbacks 프록시 테스트 결과 캡처, 배치 명령 엔드포인트, `--debug` 플래그, 내장 도구 6개 추가 (씬, 에셋, 빌드, 패키지, 테스트, 게임오브젝트 관리).
 
 **서버 실행 없음. 설정 파일 없음. 프로세스 관리 없음. 명령어만 치면 됩니다.**
 
@@ -18,6 +18,7 @@
 
 - **Phase 1**: 도구 모듈 6개 추가 (씬, 에셋, 빌드, 패키지, 테스트, 게임오브젝트) — 내장 명령 7개 → 13개로 확장
 - **Phase 2**: 성능 최적화 — 도구 탐색 캐싱, 실행 타임아웃, 동적 ICallbacks 프록시 테스트 결과 캡처, 배치 명령 지원
+- **Phase 3**: 심층 최적화 — exec 컴파일 캐싱 (SHA256 + LRU, 반복 호출 ~5배 빠름), 배치 병렬 enqueue, `--debug` 플래그 (HTTP 요청/응답 로깅), Windows MAX_PATH 수정 (response file 방식)
 
 전체 과정 — 코드 생성, 상호 리뷰, 통합 — 을 병렬 AI 에이전트 팀이 오케스트레이션했습니다. AI 기반 개발이 오픈소스 도구를 어떻게 강화할 수 있는지 보여주는 사례입니다.
 
@@ -317,6 +318,7 @@ unity-cli status
 | `--port <N>` | Unity 인스턴스 포트 직접 지정 (자동 탐지 건너뜀) | auto |
 | `--project <path>` | 프로젝트 경로로 Unity 인스턴스 선택 | latest |
 | `--timeout <ms>` | HTTP 요청 타임아웃 | 120000 |
+| `--debug` | HTTP 요청/응답을 stderr에 로깅 | off |
 
 ```bash
 # 특정 Unity 인스턴스에 연결

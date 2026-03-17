@@ -150,6 +150,12 @@ unity-cli update --check  # Check only
 | Disable recording | `unity-cli profiler disable` |
 | Check status | `unity-cli profiler status` |
 
+### Batch Commands
+| Task | Command |
+|------|---------|
+| Run multiple commands | `unity-cli batch --commands '[{"command":"status"},{"command":"console"}]'` |
+| Up to 20 commands | Commands execute in parallel on the Unity side |
+
 ### Tool Discovery
 | Task | Command |
 |------|---------|
@@ -163,6 +169,7 @@ unity-cli update --check  # Check only
 | `--port <N>` | Override Unity instance port | auto |
 | `--project <path>` | Select instance by project path | latest |
 | `--timeout <ms>` | HTTP request timeout | 120000 |
+| `--debug` | Log HTTP requests/responses to stderr | off |
 
 ```bash
 unity-cli --port 8091 editor play          # Specific port
@@ -180,6 +187,8 @@ unity-cli --project MyGame editor stop     # By project name
 - Multiple statements → needs explicit `return`: `unity-cli exec "var x = 1 + 2; return x;"`
 
 **Why this matters for AI agents:** Instead of needing 35+ predefined MCP tools, `exec` gives you infinite flexibility with a single command. Need to inspect a component? `exec`. Need to modify a prefab? `exec`. Need to query ECS entities? `exec`.
+
+**Compilation caching:** `exec` automatically caches compiled assemblies by SHA256 hash of the code (LRU cache, max 50 entries). Repeated calls with the same code skip compilation entirely, making them ~5x faster. The cache is transparent — no user action needed.
 
 ### Common exec Patterns
 

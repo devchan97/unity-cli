@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 )
@@ -26,6 +27,11 @@ type ghAsset struct {
 func updateCmd(args []string) error {
 	flags := parseSubFlags(args)
 	_, checkOnly := flags["check"]
+	_, connectorOnly := flags["connector"]
+
+	if connectorOnly {
+		return updateConnector(checkOnly)
+	}
 
 	fmt.Println("Checking for updates...")
 
@@ -118,6 +124,89 @@ func findAsset(assets []ghAsset) *ghAsset {
 		}
 	}
 	return nil
+}
+
+const connectorPackage = "com.devchan97.unity-cli-connector"
+const connectorGitURL = "https://github.com/devchan97/unity-cli.git?path=unity-connector"
+
+func updateConnector(checkOnly bool) error {
+	fmt.Println("Checking for connector updates...")
+
+	release, err := fetchLatestRelease()
+	if err != nil {
+		return fmt.Errorf("failed to check for updates: %w", err)
+	}
+	latest := release.TagName
+
+	// Find manifest.json — walk up from cwd looking for Assets/ sibling
+	manifest, err := findManifest()
+	if err != nil {
+		return fmt.Errorf("manifest.json not found: %w\nRun from inside a Unity project directory", err)
+	}
+
+	data, err := os.ReadFile(manifest)
+	if err != nil {
+		return fmt.Errorf("cannot read manifest.json: %w", err)
+	}
+	content := string(data)
+
+	// Match current connector URL (with or without #tag)
+	re := regexp.MustCompile(`("` + regexp.QuoteMeta(connectorPackage) + `"\s*:\s*"` + regexp.QuoteMeta(connectorGitURL) + `)(?:#[^"]*)?(")\s*`)
+	m := re.FindStringIndex(content)
+	if m == nil {
+		return fmt.Errorf("connector package not found in manifest.json")
+	}
+
+	// Extract current tag
+	tagRe := regexp.MustCompile(regexp.QuoteMeta(connectorGitURL) + `(?:#([^"]+))?`)
+	tagM := tagRe.FindStringSubmatch(content)
+	current := "(no tag)"
+	if len(tagM) > 1 && tagM[1] != "" {
+		current = tagM[1]
+	}
+
+	if current == latest {
+		fmt.Printf("Connector already up to date (%s)\n", latest)
+		return nil
+	}
+
+	fmt.Printf("Connector update available: %s → %s\n", current, latest)
+	if checkOnly {
+		return nil
+	}
+
+	// Replace URL with pinned tag
+	newURL := connectorGitURL + "#" + latest
+	newContent := tagRe.ReplaceAllLiteralString(content, newURL)
+
+	if err := os.WriteFile(manifest, []byte(newContent), 0644); err != nil {
+		return fmt.Errorf("cannot write manifest.json: %w", err)
+	}
+
+	fmt.Printf("Updated manifest.json: connector pinned to %s\n", latest)
+	fmt.Println("Reopen Unity or trigger Package Manager refresh to apply.")
+	return nil
+}
+
+func findManifest() (string, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	// Walk up to 4 levels looking for Packages/manifest.json
+	dir := cwd
+	for i := 0; i < 5; i++ {
+		candidate := filepath.Join(dir, "Packages", "manifest.json")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", fmt.Errorf("not found from %s", cwd)
 }
 
 func download(url string, targetDir string) (string, error) {

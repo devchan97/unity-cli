@@ -454,14 +454,18 @@ Example:
 	case "update":
 		fmt.Print(`Usage: unity-cli update [options]
 
-Update the CLI binary to the latest release from GitHub.
+Update the CLI binary and/or Unity Connector package to the latest release.
 
 Options:
   --check              Check for updates without installing
+  --connector          Update the Unity Connector package in manifest.json
+                       (run from inside a Unity project directory)
 
 Examples:
-  unity-cli update
-  unity-cli update --check
+  unity-cli update                  Update CLI binary
+  unity-cli update --check          Check CLI version only
+  unity-cli update --connector      Pin connector to latest tag in manifest.json
+  unity-cli update --connector --check  Check connector version only
 `)
 	case "version":
 		fmt.Print(`Usage: unity-cli version [options]

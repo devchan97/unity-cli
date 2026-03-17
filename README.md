@@ -428,6 +428,85 @@ unity-cli editor play
 | **Compatibility** | MCP-compatible clients only | Anything with a shell |
 | **Custom tools** | Same `[Attribute]` + `HandleCommand` pattern | Same |
 
+## Changelog
+
+### v0.3.0 (2026-03-18) — Phase 3
+
+**Added:**
+- `exec` compilation caching (SHA256 + LRU, max 50 entries, ~5x faster repeated calls)
+- `--debug` global flag for HTTP request/response logging to stderr
+- Batch parallel enqueue optimization (N ticks → 1 tick)
+
+**Fixed:**
+- `exec` MAX_PATH error on Windows (switched to response file for assembly references)
+- Missing `.meta` files for Phase 1 custom tools (6 files)
+
+### v0.2.0 (2026-03-17) — Phase 2
+
+**Added:**
+- ToolDiscovery caching (scan once per domain reload)
+- `exec` timeout (30s default, 300s max)
+- ManagePackages timeout
+- ManageTests ICallbacks dynamic proxy for test result capture
+- `/batch` endpoint (up to 20 commands per request)
+
+### v0.1.0 (2026-03-17) — Phase 1
+
+**Added:**
+- ManageScene, ManageAssets, ManageBuild
+- ManagePackages, ManageTests, ManageGameObject
+- Claude Code skill auto-install (`install-skill.ps1` / `install-skill.sh`)
+
+## Contributing
+
+### Local Build
+
+```bash
+# Prerequisites: Go 1.24+
+git clone https://github.com/devchan97/unity-cli.git
+cd unity-cli
+go build -o unity-cli .
+
+# Run
+./unity-cli status
+```
+
+### Unity Connector
+
+The C# side lives in `unity-connector/`. To develop:
+
+1. Open a Unity project
+2. In `Packages/manifest.json`, point to your local clone:
+   ```json
+   "com.devchan97.unity-cli-connector": "file:///path/to/unity-cli/unity-connector"
+   ```
+3. Edit C# code → Unity auto-recompiles → changes take effect immediately
+
+### Writing a Custom Tool
+
+1. Create a static class with `[UnityCliTool]` in any Editor assembly
+2. Implement `public static object HandleCommand(JObject parameters)`
+3. Return `SuccessResponse` or `ErrorResponse`
+4. Class name auto-converts to snake_case command name
+5. Run `unity-cli list` to verify discovery
+
+See the [Writing Custom Tools](#writing-custom-tools) section for a full example.
+
+### Project Structure
+
+```
+unity-cli/
+├── main.go              # CLI entry point
+├── cmd/                 # Go CLI command definitions
+├── internal/            # Go internal packages
+├── unity-connector/     # C# Unity package
+│   └── Editor/          # Connector, tools, HTTP server
+├── skill/               # Claude Code skill definition
+├── install.ps1          # Windows installer
+├── install.sh           # Linux/macOS installer
+└── .github/workflows/   # CI/CD (tag push → auto release)
+```
+
 ## Credits
 
 Originally created by **DevBookOfArray** ([youngwoocho02](https://github.com/youngwoocho02))

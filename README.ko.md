@@ -428,6 +428,85 @@ unity-cli editor play
 | **호환성** | MCP 호환 클라이언트만 | 셸이 있는 모든 것 |
 | **커스텀 도구** | 동일한 `[Attribute]` + `HandleCommand` 패턴 | 동일 |
 
+## 변경 이력
+
+### v0.3.0 (2026-03-18) — Phase 3
+
+**추가:**
+- `exec` 컴파일 캐싱 (SHA256 + LRU, 최대 50개, 반복 호출 ~5배 빠름)
+- `--debug` 글로벌 플래그 (HTTP 요청/응답을 stderr에 로깅)
+- 배치 병렬 enqueue 최적화 (N틱 → 1틱)
+
+**수정:**
+- Windows에서 `exec` MAX_PATH 오류 (어셈블리 참조를 response file 방식으로 전환)
+- Phase 1 커스텀 도구의 누락된 `.meta` 파일 6개 추가
+
+### v0.2.0 (2026-03-17) — Phase 2
+
+**추가:**
+- ToolDiscovery 캐싱 (도메인 리로드당 1회 스캔)
+- `exec` 타임아웃 (기본 30초, 최대 300초)
+- ManagePackages 타임아웃
+- ManageTests ICallbacks 동적 프록시 (테스트 결과 캡처)
+- `/batch` 엔드포인트 (요청당 최대 20개 명령)
+
+### v0.1.0 (2026-03-17) — Phase 1
+
+**추가:**
+- ManageScene, ManageAssets, ManageBuild
+- ManagePackages, ManageTests, ManageGameObject
+- Claude Code 스킬 자동 설치 (`install-skill.ps1` / `install-skill.sh`)
+
+## 기여하기
+
+### 로컬 빌드
+
+```bash
+# 필수: Go 1.24+
+git clone https://github.com/devchan97/unity-cli.git
+cd unity-cli
+go build -o unity-cli .
+
+# 실행
+./unity-cli status
+```
+
+### Unity 커넥터
+
+C# 코드는 `unity-connector/`에 있습니다. 개발 방법:
+
+1. Unity 프로젝트를 열고
+2. `Packages/manifest.json`에서 로컬 클론을 지정:
+   ```json
+   "com.devchan97.unity-cli-connector": "file:///path/to/unity-cli/unity-connector"
+   ```
+3. C# 코드 수정 → Unity가 자동 리컴파일 → 즉시 반영
+
+### 커스텀 도구 작성
+
+1. Editor 어셈블리에 `[UnityCliTool]`이 달린 static 클래스 생성
+2. `public static object HandleCommand(JObject parameters)` 구현
+3. `SuccessResponse` 또는 `ErrorResponse` 반환
+4. 클래스 이름이 자동으로 snake_case 명령어 이름으로 변환
+5. `unity-cli list`로 탐지 확인
+
+전체 예제는 [커스텀 도구 만들기](#커스텀-도구-만들기) 섹션을 참고하세요.
+
+### 프로젝트 구조
+
+```
+unity-cli/
+├── main.go              # CLI 진입점
+├── cmd/                 # Go CLI 명령 정의
+├── internal/            # Go 내부 패키지
+├── unity-connector/     # C# Unity 패키지
+│   └── Editor/          # 커넥터, 도구, HTTP 서버
+├── skill/               # Claude Code 스킬 정의
+├── install.ps1          # Windows 설치 스크립트
+├── install.sh           # Linux/macOS 설치 스크립트
+└── .github/workflows/   # CI/CD (태그 push → 자동 릴리스)
+```
+
 ## 크레딧
 
 원작자: **DevBookOfArray** ([youngwoocho02](https://github.com/youngwoocho02))

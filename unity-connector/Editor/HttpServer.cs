@@ -79,7 +79,7 @@ namespace UnityCliConnector
                     Debug.Log($"[UnityCliConnector] HTTP server started on port {port}");
                     return;
                 }
-                catch (HttpListenerException)
+                catch (Exception ex) when (ex is HttpListenerException || ex is System.Net.Sockets.SocketException)
                 {
                     // Port in use, try next
                 }

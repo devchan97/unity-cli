@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> **포크 안내:** [devchan97/unity-cli](https://github.com/devchan97/unity-cli)의 포크입니다. 추가된 기능 — 도구 탐색 캐싱, exec 컴파일 캐싱, exec/패키지 타임아웃, ICallbacks 프록시 테스트 결과 캡처, 배치 명령 엔드포인트, `--debug` 플래그, 내장 도구 6개 추가 (씬, 에셋, 빌드, 패키지, 테스트, 게임오브젝트 관리).
+> **포크 안내:** [devchan97/unity-cli](https://github.com/devchan97/unity-cli)의 포크입니다. 추가된 기능 — `--format` 출력 포매팅, 카메라/스크린샷 제어, 에셋 패치, 버전 협상, exec 컴파일 캐싱, 배치 명령, `--debug` 플래그, 내장 도구 9개 추가 (7개 → 16개).
 
 **서버 실행 없음. 설정 파일 없음. 프로세스 관리 없음. 명령어만 치면 됩니다.**
 
@@ -19,6 +19,7 @@
 - **Phase 1**: 도구 모듈 6개 추가 (씬, 에셋, 빌드, 패키지, 테스트, 게임오브젝트) — 내장 명령 7개 → 13개로 확장
 - **Phase 2**: 성능 최적화 — 도구 탐색 캐싱, 실행 타임아웃, 동적 ICallbacks 프록시 테스트 결과 캡처, 배치 명령 지원
 - **Phase 3**: 심층 최적화 — exec 컴파일 캐싱 (SHA256 + LRU, 반복 호출 ~5배 빠름), 배치 병렬 enqueue, `--debug` 플래그 (HTTP 요청/응답 로깅), Windows MAX_PATH 수정 (response file 방식)
+- **Phase 4**: 기능 확장 — `--format` 플래그 (json/csv/table), ManageCamera 스크린샷 캡처, AssetPatch 텍스트 치환 + 자동 리시리얼라이즈, 버전 협상 (`version --json`)
 
 전체 과정 — 코드 생성, 상호 리뷰, 통합 — 을 병렬 AI 에이전트 팀이 오케스트레이션했습니다. AI 기반 개발이 오픈소스 도구를 어떻게 강화할 수 있는지 보여주는 사례입니다.
 
@@ -319,6 +320,7 @@ unity-cli status
 | `--project <path>` | 프로젝트 경로로 Unity 인스턴스 선택 | latest |
 | `--timeout <ms>` | HTTP 요청 타임아웃 | 120000 |
 | `--debug` | HTTP 요청/응답을 stderr에 로깅 | off |
+| `--format <type>` | 출력 형식: `json` (기본), `table`, `csv` | json |
 
 ```bash
 # 특정 Unity 인스턴스에 연결
@@ -429,6 +431,14 @@ unity-cli editor play
 | **커스텀 도구** | 동일한 `[Attribute]` + `HandleCommand` 패턴 | 동일 |
 
 ## 변경 이력
+
+### v0.4.0 (2026-03-18) — Phase 4
+
+**추가:**
+- `--format` 글로벌 플래그: `json` (기본), `table`, `csv` 출력 포매팅
+- ManageCamera 도구: `screenshot`, `info`, `list`, `set_position`, `set_rotation`
+- AssetPatch 도구: 텍스트 치환 + 자동 리시리얼라이즈 (`patch`), 원본 YAML 읽기 (`read`)
+- 버전 협상: `unity-cli version --json` (CLI + 커넥터 정보)
 
 ### v0.3.0 (2026-03-18) — Phase 3
 

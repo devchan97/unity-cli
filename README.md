@@ -6,7 +6,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-> **Fork notice:** This is a fork of [devchan97/unity-cli](https://github.com/devchan97/unity-cli) with additional features — tool discovery caching, exec compilation caching, exec/package timeouts, test result capture via ICallbacks proxy, batch command endpoint, `--debug` flag, and 6 new built-in tools (scene, assets, build, packages, tests, gameobject management).
+> **Fork notice:** This is a fork of [devchan97/unity-cli](https://github.com/devchan97/unity-cli) with additional features — `--format` output formatting, camera/screenshot control, asset patching, version negotiation, exec compilation caching, batch commands, `--debug` flag, and 9 new built-in tools expanding from 7 to 16 commands.
 
 **No server to run. No config to write. No process to manage. Just type a command.**
 
@@ -19,6 +19,7 @@ This fork was created using **Claude Code Agent Teams** to systematically improv
 - **Phase 1**: Added 6 new tool modules (scene, assets, build, packages, tests, gameobject) — expanding from 7 to 13 built-in commands
 - **Phase 2**: Performance optimizations — tool discovery caching, execution timeouts, test result capture via dynamic ICallbacks proxy, and batch command support
 - **Phase 3**: Deep optimizations — exec compilation caching (SHA256 + LRU, ~5x faster repeated calls), batch parallel enqueue, `--debug` flag for HTTP request/response logging, Windows MAX_PATH fix via response files
+- **Phase 4**: Feature expansion — `--format` flag (json/csv/table), ManageCamera with screenshot capture, AssetPatch for text replacement + auto-reserialize, version negotiation (`version --json`)
 
 The entire process — code generation, cross-review, and integration — was orchestrated by parallel AI agent teams, demonstrating how AI-driven development can enhance open-source tools at scale.
 
@@ -319,6 +320,7 @@ The CLI also checks Unity's state automatically before sending any command. If U
 | `--project <path>` | Select Unity instance by project path | latest |
 | `--timeout <ms>` | HTTP request timeout | 120000 |
 | `--debug` | Log HTTP requests and responses to stderr | off |
+| `--format <type>` | Output format: `json` (default), `table`, `csv` | json |
 
 ```bash
 # Connect to a specific Unity instance
@@ -429,6 +431,14 @@ unity-cli editor play
 | **Custom tools** | Same `[Attribute]` + `HandleCommand` pattern | Same |
 
 ## Changelog
+
+### v0.4.0 (2026-03-18) — Phase 4
+
+**Added:**
+- `--format` global flag: `json` (default), `table`, `csv` output formatting
+- ManageCamera tool: `screenshot`, `info`, `list`, `set_position`, `set_rotation`
+- AssetPatch tool: text replacement with auto-reserialize (`patch`), raw YAML reader (`read`)
+- Version negotiation: `unity-cli version --json` with CLI + connector info
 
 ### v0.3.0 (2026-03-18) — Phase 3
 

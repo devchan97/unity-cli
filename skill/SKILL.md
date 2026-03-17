@@ -150,6 +150,29 @@ unity-cli update --check  # Check only
 | Disable recording | `unity-cli profiler disable` |
 | Check status | `unity-cli profiler status` |
 
+### Camera
+| Task | Command |
+|------|---------|
+| Take screenshot | `unity-cli manage_camera --action screenshot` |
+| Screenshot to path | `unity-cli manage_camera --action screenshot --path /tmp/shot.png` |
+| Camera info | `unity-cli manage_camera --action info` |
+| List all cameras | `unity-cli manage_camera --action list` |
+| Set camera position | `unity-cli manage_camera --action set_position --x 0 --y 5 --z -10` |
+| Set camera rotation | `unity-cli manage_camera --action set_rotation --x 30 --y 0 --z 0` |
+
+### Asset Patch
+| Task | Command |
+|------|---------|
+| Apply text replacement | `unity-cli asset_patch --action patch --path Assets/Scenes/Main.unity --params '{"replacements":[{"old":"value: 1","new":"value: 2"}]}'` |
+| Read raw asset YAML | `unity-cli asset_patch --action read --path Assets/Prefabs/Player.prefab` |
+| Read with offset | `unity-cli asset_patch --action read --path Assets/Scenes/Main.unity --offset 50 --lines 30` |
+
+### Version
+| Task | Command |
+|------|---------|
+| CLI version | `unity-cli version` |
+| Full version JSON | `unity-cli version --json` |
+
 ### Batch Commands
 | Task | Command |
 |------|---------|
@@ -170,6 +193,7 @@ unity-cli update --check  # Check only
 | `--project <path>` | Select instance by project path | latest |
 | `--timeout <ms>` | HTTP request timeout | 120000 |
 | `--debug` | Log HTTP requests/responses to stderr | off |
+| `--format <type>` | Output format: `json` (default), `table`, `csv` | json |
 
 ```bash
 unity-cli --port 8091 editor play          # Specific port

@@ -3,7 +3,7 @@ package cmd
 import (
 	"strconv"
 
-	"github.com/youngwoocho02/unity-cli/internal/client"
+	"github.com/devchan97/unity-cli/internal/client"
 )
 
 func consoleCmd(args []string, send sendFn) (*client.CommandResponse, error) {

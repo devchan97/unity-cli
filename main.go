@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/youngwoocho02/unity-cli/cmd"
+	"github.com/devchan97/unity-cli/cmd"
 )
 
 var Version = "dev"

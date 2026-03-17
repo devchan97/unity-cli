@@ -6,43 +6,44 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+> **Fork notice:** This is a fork of [devchan97/unity-cli](https://github.com/devchan97/unity-cli) with additional features — tool discovery caching, exec/package timeouts, test result capture via ICallbacks proxy, batch command endpoint, and 6 new built-in tools (scene, assets, build, packages, tests, gameobject management).
+
 **No server to run. No config to write. No process to manage. Just type a command.**
 
-## Why this exists
+## Why this fork
 
-I wanted to control Unity from the terminal. The existing MCP-based integrations required Python runtimes, WebSocket relays, JSON-RPC protocol layers, config files, server processes that need to be started and stopped, tool registration ceremonies, and tens of thousands of lines of over-engineered code. All just to send a simple command to Unity.
+The original [unity-cli](https://github.com/youngwoocho02/unity-cli) is a brilliant tool — a single binary that talks directly to Unity via HTTP. No MCP server, no config, no ceremony.
 
-On top of that, every AI agent that wanted to use it needed its own MCP config and integration setup. The CLI doesn't care — any agent that can run a shell command can use it immediately.
+This fork was created using **Claude Code Agent Teams** to systematically improve the CLI's performance and expand its built-in toolset:
 
-That felt wrong. If I can `curl` a URL, why do I need all that?
+- **Phase 1**: Added 6 new tool modules (scene, assets, build, packages, tests, gameobject) — expanding from 7 to 13 built-in commands
+- **Phase 2**: Performance optimizations — tool discovery caching, execution timeouts, test result capture via dynamic ICallbacks proxy, and batch command support
 
-So I built the opposite: a single binary that talks directly to Unity via HTTP. No server to run — the Unity package listens automatically. No config to write — it discovers Unity instances on its own. No tool registration — just call by name. No caching, no protocol layers, no ceremony.
-
-The entire CLI is ~800 lines of Go (plus ~300 lines of help text). The Unity-side connector is ~1,700 lines of C#. It's just a thin layer that lets you control Unity from the shell — nothing more. You install the binary, add the Unity package, and it works.
+The entire process — code generation, cross-review, and integration — was orchestrated by parallel AI agent teams, demonstrating how AI-driven development can enhance open-source tools at scale.
 
 ## Install
 
 ### Linux / macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/youngwoocho02/unity-cli/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/devchan97/unity-cli/master/install.sh | sh
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/youngwoocho02/unity-cli/master/install.ps1 | iex
+irm https://raw.githubusercontent.com/devchan97/unity-cli/master/install.ps1 | iex
 ```
 
 ### Other options
 
 ```bash
 # Go install (any platform with Go)
-go install github.com/youngwoocho02/unity-cli@latest
+go install github.com/devchan97/unity-cli@latest
 
 # Manual download (pick your platform)
 # Linux amd64 / Linux arm64 / macOS amd64 / macOS arm64 / Windows amd64
-curl -fsSL https://github.com/youngwoocho02/unity-cli/releases/latest/download/unity-cli-linux-amd64 -o unity-cli
+curl -fsSL https://github.com/devchan97/unity-cli/releases/latest/download/unity-cli-linux-amd64 -o unity-cli
 chmod +x unity-cli && sudo mv unity-cli /usr/local/bin/
 ```
 
@@ -63,12 +64,12 @@ unity-cli update --check
 Add the Unity Connector package via **Package Manager → Add package from git URL**:
 
 ```
-https://github.com/youngwoocho02/unity-cli.git?path=unity-connector
+https://github.com/devchan97/unity-cli.git?path=unity-connector
 ```
 
 Or add directly to `Packages/manifest.json`:
 ```json
-"com.youngwoocho02.unity-cli-connector": "https://github.com/youngwoocho02/unity-cli.git?path=unity-connector"
+"com.devchan97.unity-cli-connector": "https://github.com/devchan97/unity-cli.git?path=unity-connector"
 ```
 
 To pin a specific version, append a tag to the URL (e.g. `#v0.2.21`).
@@ -133,7 +134,7 @@ The Unity Connector:
 1. Opens an HTTP server on `localhost:8090` when the Editor starts
 2. Registers itself in `~/.unity-cli/instances.json` so the CLI knows where to connect
 3. Writes a heartbeat to `~/.unity-cli/status/{port}.json` every 0.5s with the current state
-4. Discovers all `[UnityCliTool]` classes via reflection on each request
+4. Discovers all `[UnityCliTool]` classes via reflection (cached after first scan per domain reload)
 5. Routes incoming commands to the matching handler on the main thread
 6. Survives domain reloads (script recompilation)
 
@@ -425,12 +426,11 @@ unity-cli editor play
 | **Compatibility** | MCP-compatible clients only | Anything with a shell |
 | **Custom tools** | Same `[Attribute]` + `HandleCommand` pattern | Same |
 
-## Author
+## Credits
 
-Created by **DevBookOfArray**
+Originally created by **DevBookOfArray** ([youngwoocho02](https://github.com/youngwoocho02))
 
-[![YouTube](https://img.shields.io/badge/YouTube-DevBookOfArray-red?logo=youtube&logoColor=white)](https://www.youtube.com/@DevBookOfArray)
-[![GitHub](https://img.shields.io/badge/GitHub-youngwoocho02-181717?logo=github)](https://github.com/youngwoocho02)
+Forked and extended by **devchan97** ([devchan97](https://github.com/devchan97))
 
 ## License
 

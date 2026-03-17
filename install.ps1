@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$repo = "youngwoocho02/unity-cli"
+$repo = "devchan97/unity-cli"
 $installDir = "$env:LOCALAPPDATA\unity-cli"
 $exe = "$installDir\unity-cli.exe"
 
@@ -19,3 +19,17 @@ if ($userPath -notlike "*$installDir*") {
 
 Write-Host "Installed unity-cli to $exe"
 & $exe version
+
+# Auto-install Claude Code skill if ~/.claude/ exists
+$claudeDir = "$env:USERPROFILE\.claude"
+if (Test-Path $claudeDir) {
+    $skillDir = "$claudeDir\skills\unity-cli"
+    $skillUrl = "https://raw.githubusercontent.com/devchan97/unity-cli/master/skill/SKILL.md"
+    New-Item -ItemType Directory -Force -Path $skillDir | Out-Null
+    try {
+        Invoke-WebRequest -Uri $skillUrl -OutFile "$skillDir\SKILL.md" -UseBasicParsing
+        Write-Host "Installed Claude Code skill to $skillDir"
+    } catch {
+        Write-Host "Claude Code skill install skipped (download failed)"
+    }
+}

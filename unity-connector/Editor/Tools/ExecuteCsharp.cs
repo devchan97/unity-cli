@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Microsoft.CSharp;
 using Newtonsoft.Json.Linq;
 
@@ -30,15 +31,21 @@ namespace UnityCliConnector.Tools
 
             [ToolParameter("Additional using directives (e.g. Unity.Entities, Unity.Mathematics)")]
             public string[] Usings { get; set; }
+
+            [ToolParameter("Execution timeout in seconds (default: 30, max: 300)")]
+            public int Timeout { get; set; }
         }
 
-        public static object HandleCommand(JObject parameters)
+        public static async Task<object> HandleCommand(JObject parameters)
         {
             var code = parameters["code"]?.Value<string>();
             if (string.IsNullOrEmpty(code))
                 return new ErrorResponse("'code' required");
 
             var extraUsings = parameters["usings"]?.ToObject<string[]>();
+
+            var timeoutSec = parameters["timeout"]?.Value<int>() ?? 30;
+            timeoutSec = Math.Max(1, Math.Min(timeoutSec, 300));
 
             if (Regex.IsMatch(code, @"\breturn[\s;]") == false)
             {
@@ -47,7 +54,7 @@ namespace UnityCliConnector.Tools
             }
 
             var source = BuildSource(code, extraUsings);
-            return CompileAndExecute(source);
+            return await CompileAndExecuteWithTimeout(source, timeoutSec);
         }
 
         private static string BuildSource(string code, string[] extraUsings)
@@ -68,7 +75,7 @@ namespace UnityCliConnector.Tools
             return sb.ToString();
         }
 
-        private static object CompileAndExecute(string source)
+        private static async Task<object> CompileAndExecuteWithTimeout(string source, int timeoutSec)
         {
             var provider = new CSharpCodeProvider();
             var cp = new CompilerParameters
@@ -105,7 +112,26 @@ namespace UnityCliConnector.Tools
             var method = result.CompiledAssembly.GetType("__CliDynamic")?.GetMethod("Execute");
             if (method == null)
                 return new ErrorResponse("Internal error: compiled type or method not found.");
-            var output = method.Invoke(null, null);
+
+            var execTask = Task.Run(() => method.Invoke(null, null));
+            var timeoutTask = Task.Delay(timeoutSec * 1000);
+            var completed = await Task.WhenAny(execTask, timeoutTask);
+
+            if (completed == timeoutTask)
+            {
+                return new ErrorResponse(
+                    $"Execution timed out after {timeoutSec}s. " +
+                    "Increase with 'timeout' parameter (max 300s). " +
+                    "Note: exec runs on a background thread; use dedicated tools for Unity API calls.");
+            }
+
+            if (execTask.IsFaulted)
+            {
+                var ex = execTask.Exception?.InnerException ?? execTask.Exception;
+                return new ErrorResponse($"Execution error: {ex?.Message}");
+            }
+
+            var output = execTask.Result;
             return new SuccessResponse("OK", Serialize(output, 0));
         }
 

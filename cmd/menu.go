@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/youngwoocho02/unity-cli/internal/client"
+	"github.com/devchan97/unity-cli/internal/client"
 )
 
 func menuCmd(args []string, send sendFn) (*client.CommandResponse, error) {

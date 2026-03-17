@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/youngwoocho02/unity-cli/internal/client"
+	"github.com/devchan97/unity-cli/internal/client"
 )
 
 var Version = "dev"
@@ -97,6 +97,8 @@ func Execute() error {
 		resp, err = menuCmd(subArgs, send)
 	case "reserialize":
 		resp, err = reserializeCmd(subArgs, send)
+	case "batch":
+		resp, err = batchCmd(subArgs, inst)
 	default:
 		// Direct custom tool call — flags become params directly
 		// e.g. `unity-cli system_tree --depth 1 --scope project` → {"depth":1,"scope":"project"}
@@ -291,6 +293,12 @@ Custom Tools:
   <name>                        Call a custom tool directly
   <name> --params '{"k":"v"}'   Call with JSON parameters
 
+Batch:
+  batch '<json>'                Execute multiple commands in one request (max 20)
+
+  Example:
+    unity-cli batch '[{"command":"list_tools","params":{}},{"command":"read_console","params":{}}]'
+
 Status:
   status                        Show Unity Editor state (ready, compiling, etc.)
 
@@ -453,6 +461,24 @@ Examples:
   unity-cli update
   unity-cli update --check
 `)
+	case "batch":
+		fmt.Print(`Usage: unity-cli batch '<json-commands>'
+
+Execute multiple commands in a single HTTP request.
+Commands run sequentially; individual failures don't abort the batch.
+
+Maximum 20 commands per batch.
+
+Request format:
+  [{"command": "<name>", "params": {...}}, ...]
+
+Response:
+  Array of results, one per command.
+
+Examples:
+  unity-cli batch '[{"command":"list_tools","params":{}}]'
+  unity-cli batch '[{"command":"manage_scene","params":{"action":"hierarchy"}},{"command":"read_console","params":{}}]'
+`)
 	case "custom-tools", "custom", "tools":
 		fmt.Print(`How to write custom tools for unity-cli
 
@@ -497,17 +523,17 @@ Rules:
 
 CLI Installation:
   # Linux / macOS
-  curl -fsSL https://raw.githubusercontent.com/youngwoocho02/unity-cli/master/install.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/devchan97/unity-cli/master/install.sh | sh
 
   # Windows (PowerShell)
-  irm https://raw.githubusercontent.com/youngwoocho02/unity-cli/master/install.ps1 | iex
+  irm https://raw.githubusercontent.com/devchan97/unity-cli/master/install.ps1 | iex
 
   # Go install (any platform)
-  go install github.com/youngwoocho02/unity-cli@latest
+  go install github.com/devchan97/unity-cli@latest
 
 Unity Setup:
   1. Window → Package Manager → + → Add package from git URL
-  2. Paste: https://github.com/youngwoocho02/unity-cli.git?path=unity-connector
+  2. Paste: https://github.com/devchan97/unity-cli.git?path=unity-connector
   The Connector starts automatically when Unity opens.
 
 Verify:

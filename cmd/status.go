@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/youngwoocho02/unity-cli/internal/client"
+	"github.com/devchan97/unity-cli/internal/client"
 )
 
 type UnityStatus struct {

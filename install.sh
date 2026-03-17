@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-REPO="youngwoocho02/unity-cli"
+REPO="devchan97/unity-cli"
 
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "$OS" in
@@ -43,3 +43,16 @@ esac
 
 echo "Installed unity-cli to $INSTALL_DIR/unity-cli"
 "$INSTALL_DIR/unity-cli" version
+
+# Auto-install Claude Code skill if ~/.claude/ exists
+CLAUDE_DIR="$HOME/.claude"
+if [ -d "$CLAUDE_DIR" ]; then
+    SKILL_DIR="$CLAUDE_DIR/skills/unity-cli"
+    SKILL_URL="https://raw.githubusercontent.com/devchan97/unity-cli/master/skill/SKILL.md"
+    mkdir -p "$SKILL_DIR"
+    if curl -fsSL "$SKILL_URL" -o "$SKILL_DIR/SKILL.md" 2>/dev/null; then
+        echo "Installed Claude Code skill to $SKILL_DIR"
+    else
+        echo "Claude Code skill install skipped (download failed)"
+    fi
+fi

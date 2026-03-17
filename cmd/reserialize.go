@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/youngwoocho02/unity-cli/internal/client"
+	"github.com/devchan97/unity-cli/internal/client"
 )
 
 func reserializeCmd(args []string, send sendFn) (*client.CommandResponse, error) {

@@ -161,6 +161,76 @@ namespace UnityCliConnector
             }
         }
 
+        static async Task<object> HandleSingleCommand(HttpListenerRequest request)
+        {
+            using var reader = new StreamReader(request.InputStream, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync();
+            var json = JObject.Parse(body);
+
+            var command = json["command"]?.ToString();
+            var parameters = json["params"] as JObject;
+
+            if (string.IsNullOrEmpty(command))
+                return new ErrorResponse("Missing 'command' field");
+
+            var tcs = new TaskCompletionSource<object>();
+            s_Queue.Enqueue(new WorkItem
+            {
+                Command = command,
+                Parameters = parameters,
+                Tcs = tcs,
+            });
+            ForceEditorUpdate();
+            return await tcs.Task;
+        }
+
+        static async Task<object> HandleBatchCommand(HttpListenerRequest request)
+        {
+            using var reader = new StreamReader(request.InputStream, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync();
+            var json = JObject.Parse(body);
+
+            var commands = json["commands"] as JArray;
+            if (commands == null || commands.Count == 0)
+                return new ErrorResponse("Missing or empty 'commands' array");
+
+            if (commands.Count > 20)
+                return new ErrorResponse("Batch limit exceeded: maximum 20 commands per request");
+
+            var results = new System.Collections.Generic.List<object>();
+
+            foreach (var cmd in commands)
+            {
+                var command = cmd["command"]?.ToString();
+                var parameters = cmd["params"] as JObject;
+
+                if (string.IsNullOrEmpty(command))
+                {
+                    results.Add(new ErrorResponse("Missing 'command' field"));
+                    continue;
+                }
+
+                try
+                {
+                    var tcs = new TaskCompletionSource<object>();
+                    s_Queue.Enqueue(new WorkItem
+                    {
+                        Command = command,
+                        Parameters = parameters,
+                        Tcs = tcs,
+                    });
+                    ForceEditorUpdate();
+                    results.Add(await tcs.Task);
+                }
+                catch (Exception ex)
+                {
+                    results.Add(new ErrorResponse($"Command '{command}' failed: {ex.Message}"));
+                }
+            }
+
+            return new SuccessResponse($"Batch completed: {results.Count} commands", results);
+        }
+
         static async Task HandleRequest(HttpListenerContext context)
         {
             var request = context.Request;
@@ -173,37 +243,23 @@ namespace UnityCliConnector
 
             try
             {
-                if (request.HttpMethod != "POST" || request.Url.AbsolutePath != "/command")
+                if (request.HttpMethod != "POST")
                 {
-                    result = new ErrorResponse($"Expected POST /command, got {request.HttpMethod} {request.Url.AbsolutePath}");
+                    result = new ErrorResponse($"Expected POST, got {request.HttpMethod}");
                     response.StatusCode = 400;
+                }
+                else if (request.Url.AbsolutePath == "/command")
+                {
+                    result = await HandleSingleCommand(request);
+                }
+                else if (request.Url.AbsolutePath == "/batch")
+                {
+                    result = await HandleBatchCommand(request);
                 }
                 else
                 {
-                    using var reader = new StreamReader(request.InputStream, Encoding.UTF8);
-                    var body = await reader.ReadToEndAsync();
-                    var json = JObject.Parse(body);
-
-                    var command = json["command"]?.ToString();
-                    var parameters = json["params"] as JObject;
-
-                    if (string.IsNullOrEmpty(command))
-                    {
-                        result = new ErrorResponse("Missing 'command' field");
-                        response.StatusCode = 400;
-                    }
-                    else
-                    {
-                        var tcs = new TaskCompletionSource<object>();
-                        s_Queue.Enqueue(new WorkItem
-                        {
-                            Command = command,
-                            Parameters = parameters,
-                            Tcs = tcs,
-                        });
-                        ForceEditorUpdate();
-                        result = await tcs.Task;
-                    }
+                    result = new ErrorResponse($"Unknown endpoint: {request.Url.AbsolutePath}");
+                    response.StatusCode = 400;
                 }
             }
             catch (Exception ex)

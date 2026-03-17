@@ -114,3 +114,49 @@ func Send(inst *Instance, command string, params interface{}, timeoutMs int) (*C
 
 	return &result, nil
 }
+
+type BatchRequest struct {
+	Commands []map[string]interface{} `json:"commands"`
+}
+
+func SendBatch(inst *Instance, commands []map[string]interface{}, timeoutMs int) (*CommandResponse, error) {
+	body, err := json.Marshal(BatchRequest{Commands: commands})
+	if err != nil {
+		return nil, err
+	}
+
+	url := fmt.Sprintf("http://127.0.0.1:%d/batch", inst.Port)
+	httpClient := &http.Client{Timeout: time.Duration(timeoutMs) * time.Millisecond}
+
+	resp, err := httpClient.Post(url, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to Unity at port %d: %v", inst.Port, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		if len(respBody) > 0 {
+			return nil, fmt.Errorf("HTTP %d from Unity: %s", resp.StatusCode, string(respBody))
+		}
+		return nil, fmt.Errorf("HTTP %d from Unity (batch)", resp.StatusCode)
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil || len(respBody) == 0 {
+		return &CommandResponse{
+			Success: true,
+			Message: "batch sent (connection closed before response)",
+		}, nil
+	}
+
+	var result CommandResponse
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return &CommandResponse{
+			Success: true,
+			Message: string(respBody),
+		}, nil
+	}
+
+	return &result, nil
+}

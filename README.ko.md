@@ -6,43 +6,44 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+> **포크 안내:** [devchan97/unity-cli](https://github.com/devchan97/unity-cli)의 포크입니다. 추가된 기능 — 도구 탐색 캐싱, exec/패키지 타임아웃, ICallbacks 프록시 테스트 결과 캡처, 배치 명령 엔드포인트, 내장 도구 6개 추가 (씬, 에셋, 빌드, 패키지, 테스트, 게임오브젝트 관리).
+
 **서버 실행 없음. 설정 파일 없음. 프로세스 관리 없음. 명령어만 치면 됩니다.**
 
-## 왜 만들었나
+## 왜 이 포크를 만들었나
 
-터미널에서 Unity를 제어하고 싶었습니다. 기존 MCP 기반 연동은 Python 런타임, WebSocket 릴레이, JSON-RPC 프로토콜 레이어, 설정 파일, 켜고 꺼야 하는 서버 프로세스, 도구 등록 절차, 수만 줄의 과잉 설계된 코드를 요구했습니다. 단순한 명령 하나 보내는 데 이 모든 게 필요했습니다.
+원본 [unity-cli](https://github.com/youngwoocho02/unity-cli)는 훌륭한 도구입니다 — Unity에 HTTP로 직접 통신하는 바이너리 하나. MCP 서버도, 설정 파일도, 절차도 없습니다.
 
-게다가 AI 에이전트마다 MCP 설정과 연동을 따로 해줘야 했습니다. CLI는 그런 게 없습니다 — 셸 명령어를 실행할 수 있는 에이전트라면 바로 쓸 수 있습니다.
+이 포크는 **Claude Code Agent Teams**를 활용하여 CLI의 성능 향상과 내장 도구 확장을 체계적으로 진행하기 위해 만들었습니다:
 
-이상하다고 느꼈습니다. `curl`로 URL 하나 쏠 수 있는데, 왜 그 모든 게 필요한가?
+- **Phase 1**: 도구 모듈 6개 추가 (씬, 에셋, 빌드, 패키지, 테스트, 게임오브젝트) — 내장 명령 7개 → 13개로 확장
+- **Phase 2**: 성능 최적화 — 도구 탐색 캐싱, 실행 타임아웃, 동적 ICallbacks 프록시 테스트 결과 캡처, 배치 명령 지원
 
-그래서 정반대로 만들었습니다. Unity에 HTTP로 직접 통신하는 바이너리 하나. 서버를 띄울 필요 없이 — Unity 패키지가 자동으로 수신합니다. 설정 파일 없이 — Unity 인스턴스를 알아서 찾습니다. 도구 등록 없이 — 이름으로 바로 호출합니다. 캐싱도, 프로토콜 레이어도, 절차도 없습니다.
-
-CLI 전체가 Go ~800줄(+ help text ~300줄), Unity 커넥터가 C# ~1,700줄입니다. 셸에서 Unity를 다루게 해주는 아주 얇은 레이어 — 그 본분에 충실합니다. 바이너리 설치하고, Unity 패키지 추가하면 끝입니다.
+전체 과정 — 코드 생성, 상호 리뷰, 통합 — 을 병렬 AI 에이전트 팀이 오케스트레이션했습니다. AI 기반 개발이 오픈소스 도구를 어떻게 강화할 수 있는지 보여주는 사례입니다.
 
 ## 설치
 
 ### Linux / macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/youngwoocho02/unity-cli/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/devchan97/unity-cli/master/install.sh | sh
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/youngwoocho02/unity-cli/master/install.ps1 | iex
+irm https://raw.githubusercontent.com/devchan97/unity-cli/master/install.ps1 | iex
 ```
 
 ### 기타 방법
 
 ```bash
 # Go install (Go가 설치된 모든 플랫폼)
-go install github.com/youngwoocho02/unity-cli@latest
+go install github.com/devchan97/unity-cli@latest
 
 # 수동 다운로드 (플랫폼 선택)
 # Linux amd64 / Linux arm64 / macOS amd64 / macOS arm64 / Windows amd64
-curl -fsSL https://github.com/youngwoocho02/unity-cli/releases/latest/download/unity-cli-linux-amd64 -o unity-cli
+curl -fsSL https://github.com/devchan97/unity-cli/releases/latest/download/unity-cli-linux-amd64 -o unity-cli
 chmod +x unity-cli && sudo mv unity-cli /usr/local/bin/
 ```
 
@@ -63,12 +64,12 @@ unity-cli update --check
 **Package Manager → Add package from git URL**에서 추가:
 
 ```
-https://github.com/youngwoocho02/unity-cli.git?path=unity-connector
+https://github.com/devchan97/unity-cli.git?path=unity-connector
 ```
 
 또는 `Packages/manifest.json`에 직접 추가:
 ```json
-"com.youngwoocho02.unity-cli-connector": "https://github.com/youngwoocho02/unity-cli.git?path=unity-connector"
+"com.devchan97.unity-cli-connector": "https://github.com/devchan97/unity-cli.git?path=unity-connector"
 ```
 
 특정 버전을 고정하려면 URL 끝에 태그를 추가하세요 (예: `#v0.2.21`).
@@ -133,7 +134,7 @@ Unity 커넥터의 동작:
 1. Editor 시작 시 `localhost:8090`에 HTTP 서버를 열고
 2. `~/.unity-cli/instances.json`에 자신을 등록하여 CLI가 연결할 수 있게 하고
 3. `~/.unity-cli/status/{port}.json`에 0.5초마다 현재 상태를 기록하고
-4. 매 요청마다 리플렉션으로 `[UnityCliTool]` 클래스를 탐지하고
+4. 리플렉션으로 `[UnityCliTool]` 클래스를 탐지하고 (도메인 리로드 후 최초 1회 스캔, 이후 캐시)
 5. 수신된 명령을 메인 스레드의 해당 핸들러로 라우팅하고
 6. 도메인 리로드(스크립트 재컴파일)에서도 유지됩니다
 
@@ -425,12 +426,11 @@ unity-cli editor play
 | **호환성** | MCP 호환 클라이언트만 | 셸이 있는 모든 것 |
 | **커스텀 도구** | 동일한 `[Attribute]` + `HandleCommand` 패턴 | 동일 |
 
-## 만든 사람
+## 크레딧
 
-**DevBookOfArray**
+원작자: **DevBookOfArray** ([youngwoocho02](https://github.com/youngwoocho02))
 
-[![YouTube](https://img.shields.io/badge/YouTube-DevBookOfArray-red?logo=youtube&logoColor=white)](https://www.youtube.com/@DevBookOfArray)
-[![GitHub](https://img.shields.io/badge/GitHub-youngwoocho02-181717?logo=github)](https://github.com/youngwoocho02)
+포크 및 확장: **devchan97** ([devchan97](https://github.com/devchan97))
 
 ## 라이선스
 

@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/youngwoocho02/unity-cli/internal/client"
+	"github.com/devchan97/unity-cli/internal/client"
 )
 
 func editorCmd(args []string, send sendFn, port int) (*client.CommandResponse, error) {

@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
-	"github.com/youngwoocho02/unity-cli/internal/client"
+	"github.com/devchan97/unity-cli/internal/client"
 )
 
 func execCmd(args []string, send sendFn) (*client.CommandResponse, error) {
@@ -19,6 +20,12 @@ func execCmd(args []string, send sendFn) (*client.CommandResponse, error) {
 
 	if usings, ok := flags["usings"]; ok {
 		params["usings"] = strings.Split(usings, ",")
+	}
+
+	if t, ok := flags["exec-timeout"]; ok {
+		if n, err := strconv.Atoi(t); err == nil {
+			params["timeout"] = n
+		}
 	}
 
 	return send("execute_csharp", params)

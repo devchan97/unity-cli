@@ -7,56 +7,22 @@ using Newtonsoft.Json.Linq;
 namespace UnityCliConnector
 {
     /// <summary>
-    /// Finds [UnityCliTool] handlers on demand via reflection.
-    /// No caching, no registration — every call scans live.
+    /// Finds [UnityCliTool] handlers via reflection with caching.
+    /// Assembly scan runs once and results are cached in static fields.
+    /// Domain reload (assembly recompilation) resets all statics automatically.
     /// </summary>
     public static class ToolDiscovery
     {
-        public static MethodInfo FindHandler(string command)
+        private static Dictionary<string, MethodInfo> s_HandlerCache;
+        private static List<object> s_SchemaCache;
+        private static bool s_Scanned;
+
+        private static void EnsureScanned()
         {
-            MethodInfo found = null;
-            Type foundType = null;
+            if (s_Scanned) return;
 
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                Type[] types;
-                try { types = assembly.GetTypes(); }
-                catch (ReflectionTypeLoadException) { continue; }
-
-                foreach (var type in types)
-                {
-                    if (type.IsClass == false) continue;
-                    var attr = type.GetCustomAttribute<UnityCliToolAttribute>();
-                    if (attr == null) continue;
-
-                    var name = attr.Name ?? StringCaseUtility.ToSnakeCase(type.Name);
-                    if (name != command) continue;
-
-                    var method = type.GetMethod("HandleCommand",
-                        BindingFlags.Public | BindingFlags.Static, null,
-                        new[] { typeof(JObject) }, null);
-
-                    if (method == null) continue;
-
-                    if (found != null)
-                    {
-                        UnityEngine.Debug.LogError(
-                            $"[UnityCliConnector] Duplicate tool '{command}': " +
-                            $"{foundType.FullName} and {type.FullName}. Using first found.");
-                        continue;
-                    }
-
-                    found = method;
-                    foundType = type;
-                }
-            }
-
-            return found;
-        }
-
-        public static List<object> GetToolSchemas()
-        {
-            var tools = new List<object>();
+            s_HandlerCache = new Dictionary<string, MethodInfo>();
+            s_SchemaCache = new List<object>();
             var nameToType = new Dictionary<string, Type>();
 
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -83,9 +49,17 @@ namespace UnityCliConnector
                     }
                     nameToType[name] = type;
 
-                    var paramsType = type.GetNestedType("Parameters");
+                    var method = type.GetMethod("HandleCommand",
+                        BindingFlags.Public | BindingFlags.Static, null,
+                        new[] { typeof(JObject) }, null);
 
-                    tools.Add(new
+                    if (method != null)
+                    {
+                        s_HandlerCache[name] = method;
+                    }
+
+                    var paramsType = type.GetNestedType("Parameters");
+                    s_SchemaCache.Add(new
                     {
                         name,
                         description = attr.Description ?? "",
@@ -95,7 +69,19 @@ namespace UnityCliConnector
                 }
             }
 
-            return tools;
+            s_Scanned = true;
+        }
+
+        public static MethodInfo FindHandler(string command)
+        {
+            EnsureScanned();
+            return s_HandlerCache.TryGetValue(command, out var method) ? method : null;
+        }
+
+        public static List<object> GetToolSchemas()
+        {
+            EnsureScanned();
+            return s_SchemaCache;
         }
 
         public static List<object> GetParameterSchema(Type paramsType)

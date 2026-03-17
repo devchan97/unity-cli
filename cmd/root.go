@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/devchan97/unity-cli/internal/client"
+	"github.com/devchan97/unity-cli/internal/formatter"
 )
 
 var Version = "dev"
@@ -18,6 +19,7 @@ var (
 	flagProject string
 	flagTimeout int
 	flagDebug   bool
+	flagFormat  string
 )
 
 func Execute() error {
@@ -25,6 +27,7 @@ func Execute() error {
 	flag.StringVar(&flagProject, "project", "", "Select Unity instance by project path")
 	flag.IntVar(&flagTimeout, "timeout", 120000, "Request timeout in milliseconds")
 	flag.BoolVar(&flagDebug, "debug", false, "Show HTTP request/response details")
+	flag.StringVar(&flagFormat, "format", "json", "Output format: json, csv, table")
 
 	flag.Usage = func() { printHelp() }
 
@@ -57,8 +60,7 @@ func Execute() error {
 		}
 		return nil
 	case "version", "--version", "-v":
-		fmt.Println("unity-cli " + Version)
-		return nil
+		return versionCmd(subArgs)
 	case "update":
 		return updateCmd(subArgs)
 	case "status":
@@ -139,7 +141,7 @@ func Execute() error {
 		return err
 	}
 
-	printResponse(resp)
+	printResponse(resp, flagFormat)
 
 	if !resp.Success {
 		os.Exit(1)
@@ -150,7 +152,7 @@ func Execute() error {
 
 type sendFn func(command string, params interface{}) (*client.CommandResponse, error)
 
-func printResponse(resp *client.CommandResponse) {
+func printResponse(resp *client.CommandResponse, format string) {
 	if !resp.Success {
 		msg := resp.Message
 		if msg == "" {
@@ -164,21 +166,9 @@ func printResponse(resp *client.CommandResponse) {
 		return
 	}
 
-	if resp.Data != nil && len(resp.Data) > 0 && string(resp.Data) != "null" {
-		var pretty interface{}
-		if json.Unmarshal(resp.Data, &pretty) == nil {
-			// If data is a plain string, print it raw (preserves newlines for tree output etc.)
-			if s, ok := pretty.(string); ok {
-				fmt.Println(s)
-			} else {
-				b, _ := json.MarshalIndent(pretty, "", "  ")
-				fmt.Println(string(b))
-			}
-		} else {
-			fmt.Println(string(resp.Data))
-		}
-	} else if resp.Message != "" {
-		fmt.Println(resp.Message)
+	output := formatter.Format(resp.Data, resp.Message, format)
+	if output != "" {
+		fmt.Println(output)
 	}
 }
 
@@ -223,7 +213,7 @@ func setStr(flags map[string]string, params map[string]interface{}, flag, param 
 
 func splitArgs(args []string) (flags, commands []string) {
 	for i := 0; i < len(args); i++ {
-		if args[i] == "--port" || args[i] == "--project" || args[i] == "--timeout" {
+		if args[i] == "--port" || args[i] == "--project" || args[i] == "--timeout" || args[i] == "--format" {
 			flags = append(flags, args[i])
 			if i+1 < len(args) {
 				i++
@@ -308,6 +298,10 @@ Batch:
 Status:
   status                        Show Unity Editor state (ready, compiling, etc.)
 
+Version:
+  version                       Show CLI version
+  version --json                Show CLI + connector version info as JSON
+
 Update:
   update                        Update to the latest version
   update --check                Check for updates without installing
@@ -317,6 +311,7 @@ Global Options:
   --project <path>    Select Unity instance by project path
   --timeout <ms>      Request timeout in ms (default: 120000)
   --debug             Show HTTP request/response details
+  --format <type>     Output format: json (default), table, csv
 
 Use "unity-cli <command> --help" for more information about a command.
 
@@ -467,6 +462,19 @@ Options:
 Examples:
   unity-cli update
   unity-cli update --check
+`)
+	case "version":
+		fmt.Print(`Usage: unity-cli version [options]
+
+Show unity-cli version information.
+
+Options:
+  --json                Show extended version info as JSON,
+                        including connector version if Unity is running.
+
+Examples:
+  unity-cli version
+  unity-cli version --json
 `)
 	case "batch":
 		fmt.Print(`Usage: unity-cli batch '<json-commands>'

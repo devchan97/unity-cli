@@ -197,7 +197,10 @@ namespace UnityCliConnector
             if (commands.Count > 20)
                 return new ErrorResponse("Batch limit exceeded: maximum 20 commands per request");
 
-            var results = new System.Collections.Generic.List<object>();
+            // Enqueue ALL commands at once, then await all results.
+            // This allows ProcessQueue to drain them in a single editor tick
+            // instead of requiring N separate ticks.
+            var tasks = new System.Collections.Generic.List<Task<object>>();
 
             foreach (var cmd in commands)
             {
@@ -206,25 +209,32 @@ namespace UnityCliConnector
 
                 if (string.IsNullOrEmpty(command))
                 {
-                    results.Add(new ErrorResponse("Missing 'command' field"));
+                    tasks.Add(Task.FromResult<object>(new ErrorResponse("Missing 'command' field")));
                     continue;
                 }
 
+                var tcs = new TaskCompletionSource<object>();
+                s_Queue.Enqueue(new WorkItem
+                {
+                    Command = command,
+                    Parameters = parameters,
+                    Tcs = tcs,
+                });
+                tasks.Add(tcs.Task);
+            }
+
+            ForceEditorUpdate();
+
+            var results = new System.Collections.Generic.List<object>();
+            foreach (var task in tasks)
+            {
                 try
                 {
-                    var tcs = new TaskCompletionSource<object>();
-                    s_Queue.Enqueue(new WorkItem
-                    {
-                        Command = command,
-                        Parameters = parameters,
-                        Tcs = tcs,
-                    });
-                    ForceEditorUpdate();
-                    results.Add(await tcs.Task);
+                    results.Add(await task);
                 }
                 catch (Exception ex)
                 {
-                    results.Add(new ErrorResponse($"Command '{command}' failed: {ex.Message}"));
+                    results.Add(new ErrorResponse($"Command failed: {ex.Message}"));
                 }
             }
 

@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -24,6 +25,17 @@ namespace UnityCliConnector.Tools
             "UnityEngine",
             "UnityEditor",
         };
+
+        // LRU compilation cache: source hash → compiled MethodInfo
+        private const int MAX_CACHE_SIZE = 50;
+        private static readonly Dictionary<string, CacheEntry> s_Cache = new();
+        private static readonly LinkedList<string> s_LruOrder = new();
+
+        private struct CacheEntry
+        {
+            public MethodInfo Method;
+            public LinkedListNode<string> LruNode;
+        }
 
         public class Parameters
         {
@@ -76,81 +88,117 @@ namespace UnityCliConnector.Tools
             return sb.ToString();
         }
 
+        private static string ComputeSourceHash(string source)
+        {
+            using var sha = SHA256.Create();
+            var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(source));
+            return BitConverter.ToString(bytes).Replace("-", "");
+        }
+
+        private static MethodInfo TryGetCachedMethod(string hash)
+        {
+            if (!s_Cache.TryGetValue(hash, out var entry))
+                return null;
+            s_LruOrder.Remove(entry.LruNode);
+            s_LruOrder.AddFirst(entry.LruNode);
+            return entry.Method;
+        }
+
+        private static void StoreInCache(string hash, MethodInfo method)
+        {
+            while (s_Cache.Count >= MAX_CACHE_SIZE && s_LruOrder.Count > 0)
+            {
+                var oldest = s_LruOrder.Last.Value;
+                s_LruOrder.RemoveLast();
+                s_Cache.Remove(oldest);
+            }
+            var node = s_LruOrder.AddFirst(hash);
+            s_Cache[hash] = new CacheEntry { Method = method, LruNode = node };
+        }
+
         private static async Task<object> CompileAndExecuteWithTimeout(string source, int timeoutSec)
         {
-            var provider = new CSharpCodeProvider();
-            var cp = new CompilerParameters
-            {
-                GenerateInMemory = true,
-                GenerateExecutable = false,
-                TreatWarningsAsErrors = false
-            };
+            var hash = ComputeSourceHash(source);
+            var method = TryGetCachedMethod(hash);
 
-            // Collect assembly references into a response file to avoid
-            // Windows command-line length limits (mono -r: args overflow).
-            var refs = new List<string>();
-            var added = new HashSet<string>();
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            if (method == null)
             {
+                // Cache miss: full compilation
+                var provider = new CSharpCodeProvider();
+                var cp = new CompilerParameters
+                {
+                    GenerateInMemory = true,
+                    GenerateExecutable = false,
+                    TreatWarningsAsErrors = false
+                };
+
+                var refs = new List<string>();
+                var added = new HashSet<string>();
+                foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    try
+                    {
+                        if (asm.IsDynamic || string.IsNullOrEmpty(asm.Location)) continue;
+                        var name = asm.GetName().Name;
+                        if (!added.Add(name)) continue;
+                        if (name == "mscorlib") continue;
+                        if (IsBclFacade(asm)) continue;
+                        refs.Add(asm.Location);
+                    }
+                    catch { }
+                }
+
+                var rspPath = Path.Combine(Path.GetTempPath(), $"unity-cli-exec-{Guid.NewGuid():N}.rsp");
                 try
                 {
-                    if (asm.IsDynamic || string.IsNullOrEmpty(asm.Location)) continue;
-                    var name = asm.GetName().Name;
-                    if (!added.Add(name)) continue;
-                    if (name == "mscorlib") continue;
-                    if (IsBclFacade(asm)) continue;
-                    refs.Add(asm.Location);
+                    var rspContent = new StringBuilder();
+                    foreach (var r in refs)
+                        rspContent.AppendLine($"-r:\"{r}\"");
+                    File.WriteAllText(rspPath, rspContent.ToString());
+                    cp.CompilerOptions = $"@\"{rspPath}\"";
+
+                    var result = provider.CompileAssemblyFromSource(cp, source);
+                    if (result.Errors.HasErrors)
+                    {
+                        var errors = new List<string>();
+                        foreach (CompilerError err in result.Errors)
+                            if (!err.IsWarning) errors.Add($"L{err.Line}: {err.ErrorText}");
+                        return new ErrorResponse($"Compile error:\n{string.Join("\n", errors)}");
+                    }
+
+                    method = result.CompiledAssembly.GetType("__CliDynamic")?.GetMethod("Execute");
+                    if (method == null)
+                        return new ErrorResponse("Internal error: compiled type or method not found.");
+
+                    StoreInCache(hash, method);
                 }
-                catch { }
+                finally
+                {
+                    try { File.Delete(rspPath); } catch { }
+                }
             }
 
-            var rspPath = Path.Combine(Path.GetTempPath(), $"unity-cli-exec-{Guid.NewGuid():N}.rsp");
-            try
+            // Execute (cache hit and miss paths converge here)
+            var execTask = Task.Run(() => method.Invoke(null, null));
+            var timeoutTask = Task.Delay(timeoutSec * 1000);
+            var completed = await Task.WhenAny(execTask, timeoutTask);
+
+            if (completed == timeoutTask)
             {
-                var rspContent = new StringBuilder();
-                foreach (var r in refs)
-                    rspContent.AppendLine($"-r:\"{r}\"");
-                File.WriteAllText(rspPath, rspContent.ToString());
-                cp.CompilerOptions = $"@\"{rspPath}\"";
-
-                var result = provider.CompileAssemblyFromSource(cp, source);
-                if (result.Errors.HasErrors)
-                {
-                    var errors = new List<string>();
-                    foreach (CompilerError err in result.Errors)
-                        if (!err.IsWarning) errors.Add($"L{err.Line}: {err.ErrorText}");
-                    return new ErrorResponse($"Compile error:\n{string.Join("\n", errors)}");
-                }
-
-                var method = result.CompiledAssembly.GetType("__CliDynamic")?.GetMethod("Execute");
-                if (method == null)
-                    return new ErrorResponse("Internal error: compiled type or method not found.");
-
-                var execTask = Task.Run(() => method.Invoke(null, null));
-                var timeoutTask = Task.Delay(timeoutSec * 1000);
-                var completed = await Task.WhenAny(execTask, timeoutTask);
-
-                if (completed == timeoutTask)
-                {
-                    return new ErrorResponse(
-                        $"Execution timed out after {timeoutSec}s. " +
-                        "Increase with 'timeout' parameter (max 300s). " +
-                        "Note: exec runs on a background thread; use dedicated tools for Unity API calls.");
-                }
-
-                if (execTask.IsFaulted)
-                {
-                    var ex = execTask.Exception?.InnerException ?? execTask.Exception;
-                    return new ErrorResponse($"Execution error: {ex?.Message}");
-                }
-
-                var output = execTask.Result;
-                return new SuccessResponse("OK", Serialize(output, 0));
+                return new ErrorResponse(
+                    $"Execution timed out after {timeoutSec}s. " +
+                    "Increase with 'timeout' parameter (max 300s). " +
+                    "Note: exec runs on a background thread; use dedicated tools for Unity API calls.");
             }
-            finally
+
+            if (execTask.IsFaulted)
             {
-                try { File.Delete(rspPath); } catch { }
+                var ex = execTask.Exception?.InnerException ?? execTask.Exception;
+                return new ErrorResponse($"Execution error: {ex?.Message}");
             }
+
+            var output = execTask.Result;
+            return new SuccessResponse("OK", Serialize(output, 0));
         }
 
         private static bool IsBclFacade(Assembly asm)

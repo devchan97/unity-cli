@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,24 @@ import (
 	"strings"
 	"time"
 )
+
+// Debug enables verbose HTTP request/response logging to stderr.
+var Debug bool
+
+var defaultClient = &http.Client{
+	Transport: &http.Transport{
+		MaxIdleConns:        5,
+		MaxIdleConnsPerHost: 5,
+		IdleConnTimeout:     30 * time.Second,
+	},
+}
+
+func debugLog(format string, args ...interface{}) {
+	if !Debug {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "[DEBUG] "+format+"\n", args...)
+}
 
 type Instance struct {
 	ProjectPath  string `json:"projectPath"`
@@ -79,30 +98,47 @@ func Send(inst *Instance, command string, params interface{}, timeoutMs int) (*C
 	}
 
 	url := fmt.Sprintf("http://127.0.0.1:%d/command", inst.Port)
-	httpClient := &http.Client{Timeout: time.Duration(timeoutMs) * time.Millisecond}
 
-	resp, err := httpClient.Post(url, "application/json", bytes.NewReader(body))
+	debugLog("-> POST %s", url)
+	debugLog("-> Body: %s", string(body))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMs)*time.Millisecond)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := defaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to Unity at port %d: %v", inst.Port, err)
 	}
 	defer resp.Body.Close()
 
+	debugLog("<- Status: %d", resp.StatusCode)
+
 	if resp.StatusCode != http.StatusOK {
-		var body []byte
-		body, _ = io.ReadAll(resp.Body)
-		if len(body) > 0 {
-			return nil, fmt.Errorf("HTTP %d from Unity: %s", resp.StatusCode, string(body))
+		var errBody []byte
+		errBody, _ = io.ReadAll(resp.Body)
+		debugLog("<- Body: %s", string(errBody))
+		if len(errBody) > 0 {
+			return nil, fmt.Errorf("HTTP %d from Unity: %s", resp.StatusCode, string(errBody))
 		}
 		return nil, fmt.Errorf("HTTP %d from Unity (command: %s)", resp.StatusCode, command)
 	}
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil || len(respBody) == 0 {
+		debugLog("<- Body: (empty)")
 		return &CommandResponse{
 			Success: true,
 			Message: fmt.Sprintf("%s sent (connection closed before response)", command),
 		}, nil
 	}
+
+	debugLog("<- Body: %s", string(respBody))
 
 	var result CommandResponse
 	if err := json.Unmarshal(respBody, &result); err != nil {
@@ -126,16 +162,30 @@ func SendBatch(inst *Instance, commands []map[string]interface{}, timeoutMs int)
 	}
 
 	url := fmt.Sprintf("http://127.0.0.1:%d/batch", inst.Port)
-	httpClient := &http.Client{Timeout: time.Duration(timeoutMs) * time.Millisecond}
 
-	resp, err := httpClient.Post(url, "application/json", bytes.NewReader(body))
+	debugLog("-> POST %s", url)
+	debugLog("-> Body: %s", string(body))
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMs)*time.Millisecond)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := defaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to Unity at port %d: %v", inst.Port, err)
 	}
 	defer resp.Body.Close()
 
+	debugLog("<- Status: %d", resp.StatusCode)
+
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
+		debugLog("<- Body: %s", string(respBody))
 		if len(respBody) > 0 {
 			return nil, fmt.Errorf("HTTP %d from Unity: %s", resp.StatusCode, string(respBody))
 		}
@@ -144,11 +194,14 @@ func SendBatch(inst *Instance, commands []map[string]interface{}, timeoutMs int)
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil || len(respBody) == 0 {
+		debugLog("<- Body: (empty)")
 		return &CommandResponse{
 			Success: true,
 			Message: "batch sent (connection closed before response)",
 		}, nil
 	}
+
+	debugLog("<- Body: %s", string(respBody))
 
 	var result CommandResponse
 	if err := json.Unmarshal(respBody, &result); err != nil {

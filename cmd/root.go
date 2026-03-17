@@ -17,12 +17,14 @@ var (
 	flagPort    int
 	flagProject string
 	flagTimeout int
+	flagDebug   bool
 )
 
 func Execute() error {
 	flag.IntVar(&flagPort, "port", 0, "Override Unity instance port")
 	flag.StringVar(&flagProject, "project", "", "Select Unity instance by project path")
 	flag.IntVar(&flagTimeout, "timeout", 120000, "Request timeout in milliseconds")
+	flag.BoolVar(&flagDebug, "debug", false, "Show HTTP request/response details")
 
 	flag.Usage = func() { printHelp() }
 
@@ -66,6 +68,8 @@ func Execute() error {
 		}
 		return statusCmd(inst)
 	}
+
+	client.Debug = flagDebug
 
 	inst, err := client.DiscoverInstance(flagProject, flagPort)
 	if err != nil {
@@ -225,6 +229,8 @@ func splitArgs(args []string) (flags, commands []string) {
 				i++
 				flags = append(flags, args[i])
 			}
+		} else if args[i] == "--debug" {
+			flags = append(flags, args[i])
 		} else {
 			commands = append(commands, args[i])
 		}
@@ -310,6 +316,7 @@ Global Options:
   --port <N>          Connect to specific Unity port (skip auto-discovery)
   --project <path>    Select Unity instance by project path
   --timeout <ms>      Request timeout in ms (default: 120000)
+  --debug             Show HTTP request/response details
 
 Use "unity-cli <command> --help" for more information about a command.
 

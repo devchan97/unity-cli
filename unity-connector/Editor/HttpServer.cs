@@ -60,9 +60,20 @@ namespace UnityCliConnector
         {
             if (s_Listener != null) return;
 
-            for (var attempt = 0; attempt < MAX_PORT_ATTEMPTS; attempt++)
+            // Prefer the last-used port so port number stays stable across domain reloads.
+            // Falls back to DEFAULT_PORT + sequential scan if the preferred port is busy.
+            int preferredPort = InstanceRegistry.LastPort > 0 ? InstanceRegistry.LastPort : DEFAULT_PORT;
+
+            // Build candidate list: preferred port first, then DEFAULT_PORT..DEFAULT_PORT+MAX
+            var candidates = new System.Collections.Generic.List<int> { preferredPort };
+            for (var i = 0; i < MAX_PORT_ATTEMPTS; i++)
             {
-                var port = DEFAULT_PORT + attempt;
+                var p = DEFAULT_PORT + i;
+                if (p != preferredPort) candidates.Add(p);
+            }
+
+            foreach (var port in candidates)
+            {
                 try
                 {
                     var listener = new HttpListener();

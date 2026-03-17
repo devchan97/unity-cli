@@ -17,6 +17,22 @@ namespace UnityCliConnector
         static readonly string s_Path = Path.Combine(s_Dir, "instances.json");
         static int s_RegisteredPort;
 
+        /// <summary>
+        /// Returns the port this project was last registered on (from instances.json),
+        /// so HttpServer can reuse it across domain reloads instead of climbing to a new port.
+        /// </summary>
+        public static int LastPort
+        {
+            get
+            {
+                var projectPath = Application.dataPath.Replace("/Assets", "");
+                foreach (var inst in Load())
+                    if (inst.projectPath == projectPath)
+                        return inst.port;
+                return 0;
+            }
+        }
+
         [Serializable]
         class InstanceEntry
         {

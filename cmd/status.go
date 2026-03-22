@@ -55,6 +55,7 @@ func readStatus(port int) (*UnityStatus, error) {
 }
 
 // waitForAlive reads the current timestamp, then polls until a newer one appears.
+// It re-discovers the instance on each poll to handle port changes after domain reloads.
 func waitForAlive(port int, timeoutMs int) error {
 	baseline := time.Now().UnixMilli()
 	if status, err := readStatus(port); err == nil {
@@ -71,7 +72,14 @@ func waitForAlive(port int, timeoutMs int) error {
 	deadline := time.Now().Add(time.Duration(timeoutMs) * time.Millisecond)
 	for time.Now().Before(deadline) {
 		time.Sleep(500 * time.Millisecond)
-		status, err := readStatus(port)
+
+		// Re-discover in case port changed after a domain reload
+		effectivePort := port
+		if inst, err := client.DiscoverInstance(flagProject, flagPort); err == nil {
+			effectivePort = inst.Port
+		}
+
+		status, err := readStatus(effectivePort)
 		if err != nil {
 			continue
 		}
@@ -84,19 +92,30 @@ func waitForAlive(port int, timeoutMs int) error {
 	return fmt.Errorf("timed out waiting for Unity (port %d)", port)
 }
 
-// waitForReady polls indefinitely until the heartbeat state becomes "ready".
-func waitForReady(port int) {
+// waitForReady polls until the heartbeat state becomes "ready", re-discovering
+// the port on each tick to handle domain reloads that change the port.
+func waitForReady(port int) error {
 	fmt.Fprintf(os.Stderr, "Waiting for compilation...\n")
 
-	for {
+	deadline := time.Now().Add(120 * time.Second)
+	for time.Now().Before(deadline) {
 		time.Sleep(500 * time.Millisecond)
-		status, err := readStatus(port)
+
+		// Re-discover in case port changed after a domain reload
+		effectivePort := port
+		if inst, err := client.DiscoverInstance(flagProject, flagPort); err == nil {
+			effectivePort = inst.Port
+		}
+
+		status, err := readStatus(effectivePort)
 		if err != nil {
 			continue
 		}
 		if status.State == "ready" {
 			fmt.Fprintf(os.Stderr, "Compilation complete.\n")
-			return
+			return nil
 		}
 	}
+
+	return fmt.Errorf("timed out waiting for compilation (port %d) — check Unity console for errors", port)
 }

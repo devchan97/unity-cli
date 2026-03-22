@@ -5,3 +5,4 @@ unity-cli-*
 .DS_Store
 .vscode/
 .idea/
+*.png
